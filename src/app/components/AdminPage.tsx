@@ -1,0 +1,478 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
+import { type Booking, getBookings, updateBookingStatus, deleteBooking } from '../../utils/bookings';
+
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'taxi2024';
+
+type StatusFilter = 'all' | Booking['status'];
+
+const statusColors: Record<Booking['status'], string> = {
+  pending:   'bg-amber-100 text-amber-800 border border-amber-200',
+  confirmed: 'bg-blue-100 text-blue-800 border border-blue-200',
+  completed: 'bg-green-100 text-green-800 border border-green-200',
+  cancelled: 'bg-red-100 text-red-800 border border-red-200',
+};
+
+const statusLabels: Record<Booking['status'], string> = {
+  pending:   'Pending',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
+// Only these 3 statuses are usable in admin (no "confirmed")
+const USABLE_STATUSES = ['pending', 'completed', 'cancelled'] as const;
+
+export default function AdminPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortBy, setSortBy] = useState<'createdAt' | 'name'>('createdAt');
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (isLoggedIn) setBookings(getBookings());
+  }, [isLoggedIn, refreshKey]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username === ADMIN_USER && password === ADMIN_PASS) {
+      setIsLoggedIn(true);
+      setLoginError('');
+    } else {
+      setLoginError('Incorrect username or password.');
+    }
+  };
+
+  const handleStatusChange = (id: string, status: Booking['status']) => {
+    updateBookingStatus(id, status);
+    setRefreshKey(k => k + 1);
+    if (selectedBooking?.id === id) setSelectedBooking(prev => prev ? { ...prev, status } : null);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Delete this booking?')) {
+      deleteBooking(id);
+      setRefreshKey(k => k + 1);
+      if (selectedBooking?.id === id) setSelectedBooking(null);
+    }
+  };
+
+  const filtered = bookings
+    .filter(b => {
+      const q = search.toLowerCase();
+      return (
+        (statusFilter === 'all' || b.status === statusFilter) &&
+        (b.name.toLowerCase().includes(q) ||
+          b.phone.includes(q) ||
+          b.id.toLowerCase().includes(q) ||
+          b.from.toLowerCase().includes(q) ||
+          b.to.toLowerCase().includes(q))
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+
+  const stats = {
+    total:     bookings.length,
+    pending:   bookings.filter(b => b.status === 'pending').length,
+    completed: bookings.filter(b => b.status === 'completed').length,
+    cancelled: bookings.filter(b => b.status === 'cancelled').length,
+  };
+
+  // ─── Login ───────────────────────────────────────────────────────────────────
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#efbf04] mb-4 shadow-lg">
+              <svg className="w-9 h-9 text-black" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5S16.67 13 17.5 13s1.5.67 1.5 1.5S18.33 16 17.5 16zM5 11l1.5-4.5h11L19 11H5z"/>
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Nordic Uppsala Taxi</h1>
+            <p className="text-gray-400 text-sm mt-1">Admin Dashboard</p>
+          </div>
+
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 shadow-2xl">
+            <h2 className="text-lg font-semibold text-white mb-6">Sign In</h2>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Username</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="admin"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 text-sm outline-none focus:border-[#efbf04] focus:ring-1 focus:ring-[#efbf04] transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder:text-gray-500 text-sm outline-none focus:border-[#efbf04] focus:ring-1 focus:ring-[#efbf04] transition-all"
+                />
+              </div>
+              {loginError && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
+                  {loginError}
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-[#efbf04] hover:bg-[#d9ab03] text-black font-bold py-3 rounded-xl transition-all active:scale-95 shadow-lg shadow-[#efbf04]/20 mt-2"
+              >
+                Sign In
+              </button>
+            </form>
+            <div className="mt-6 pt-4 border-t border-white/10 text-center">
+              <p className="text-xs text-gray-500">Demo: admin / taxi2024</p>
+            </div>
+          </div>
+
+          <div className="text-center mt-6">
+            <Link to="/" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
+              ← Back to main site
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Dashboard ────────────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-gray-50 font-['Rubik',sans-serif]">
+
+      {/* Top Nav */}
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#efbf04] flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5S16.67 13 17.5 13s1.5.67 1.5 1.5S18.33 16 17.5 16zM5 11l1.5-4.5h11L19 11H5z"/>
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm leading-none">Nordic Uppsala Taxi</p>
+                <p className="text-xs text-gray-400 leading-none mt-0.5">Admin</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link to="/" className="text-sm text-gray-500 hover:text-gray-800 transition-colors hidden sm:block">
+                Back to site
+              </Link>
+              <button
+                onClick={() => setIsLoggedIn(false)}
+                className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium px-4 py-2 rounded-xl transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Booking Management</h1>
+          <p className="text-gray-500 text-sm mt-1">View and manage all taxi bookings.</p>
+        </div>
+
+        {/* Stats — no revenue, no confirmed */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{stats.total}</p>
+            <p className="text-xs text-gray-400 mt-1">bookings</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-amber-100 shadow-sm">
+            <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Pending</p>
+            <p className="text-3xl font-bold text-amber-600 mt-1">{stats.pending}</p>
+            <p className="text-xs text-gray-400 mt-1">bookings</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-green-100 shadow-sm">
+            <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Completed</p>
+            <p className="text-3xl font-bold text-green-600 mt-1">{stats.completed}</p>
+            <p className="text-xs text-gray-400 mt-1">bookings</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-red-100 shadow-sm">
+            <p className="text-xs font-semibold text-red-500 uppercase tracking-wide">Cancelled</p>
+            <p className="text-3xl font-bold text-red-500 mt-1">{stats.cancelled}</p>
+            <p className="text-xs text-gray-400 mt-1">bookings</p>
+          </div>
+        </div>
+
+        {/* Table Card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          {/* Filters */}
+          <div className="p-4 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by name, phone, ID..."
+                className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-[#efbf04] focus:ring-1 focus:ring-[#efbf04] transition-all"
+              />
+            </div>
+
+            {/* Status filters — only 3 usable statuses + All */}
+            <div className="flex gap-2 flex-wrap">
+              {(['all', ...USABLE_STATUSES] as const).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    statusFilter === s ? 'bg-[#efbf04] text-black shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {s === 'all' ? 'All' : statusLabels[s]}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as typeof sortBy)}
+              className="text-sm border border-gray-200 rounded-xl px-3 py-2.5 outline-none focus:border-[#efbf04] bg-white text-gray-700"
+            >
+              <option value="createdAt">Newest first</option>
+              <option value="name">Name A–Z</option>
+            </select>
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">ID</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Passenger</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Route</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Departure</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Vehicle</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
+                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No bookings found</td>
+                  </tr>
+                ) : (
+                  filtered.map(booking => (
+                    <tr
+                      key={booking.id}
+                      onClick={() => setSelectedBooking(booking)}
+                      className="hover:bg-gray-50/80 cursor-pointer transition-colors"
+                    >
+                      <td className="px-5 py-4 text-xs font-mono text-gray-400">{booking.id}</td>
+                      <td className="px-5 py-4">
+                        <p className="text-sm font-semibold text-gray-900">{booking.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{booking.phone}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <p className="text-sm text-gray-700">📍 {booking.from}</p>
+                        <p className="text-sm text-gray-700 mt-0.5">🏁 {booking.to}</p>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-gray-600 whitespace-nowrap">{booking.departureTime}</td>
+                      <td className="px-5 py-4">
+                        <p className="text-sm text-gray-700">{booking.carSize}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {booking.passengers}👤 {booking.luggage}🧳
+                          {booking.hasChild ? ' 👶' : ''}
+                          {booking.hasPet ? ' 🐾' : ''}
+                        </p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${statusColors[booking.status]}`}>
+                          {statusLabels[booking.status]}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                          <select
+                            value={booking.status}
+                            onChange={e => handleStatusChange(booking.id, e.target.value as Booking['status'])}
+                            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-[#efbf04] bg-white"
+                          >
+                            {USABLE_STATUSES.map(s => (
+                              <option key={s} value={s}>{statusLabels[s]}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => handleDelete(booking.id)}
+                            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {filtered.length === 0 ? (
+              <p className="text-center py-12 text-gray-400 text-sm">No bookings found</p>
+            ) : (
+              filtered.map(booking => (
+                <div key={booking.id} className="p-4" onClick={() => setSelectedBooking(booking)}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-semibold text-gray-900">{booking.name}</p>
+                      <p className="text-sm text-gray-400">{booking.phone}</p>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${statusColors[booking.status]}`}>
+                      {statusLabels[booking.status]}
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3 mb-3">
+                    <p className="text-sm text-gray-600">📍 {booking.from} → 🏁 {booking.to}</p>
+                    <p className="text-xs text-gray-400 mt-1">⏰ {booking.departureTime}</p>
+                  </div>
+                  <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                    <select
+                      value={booking.status}
+                      onChange={e => handleStatusChange(booking.id, e.target.value as Booking['status'])}
+                      className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-[#efbf04] bg-white"
+                    >
+                      {USABLE_STATUSES.map(s => (
+                        <option key={s} value={s}>{statusLabels[s]}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => handleDelete(booking.id)}
+                      className="px-3 py-2 text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-all"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/50 text-xs text-gray-400">
+            Showing {filtered.length} of {bookings.length} bookings
+          </div>
+        </div>
+      </div>
+
+      {/* Detail Drawer */}
+      {selectedBooking && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setSelectedBooking(null)} />
+          <div className="relative bg-white w-full max-w-md h-full overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between z-10">
+              <div>
+                <p className="font-bold text-gray-900">Booking Details</p>
+                <p className="text-xs text-gray-400 font-mono">{selectedBooking.id}</p>
+              </div>
+              <button onClick={() => setSelectedBooking(null)} className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all">
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              <div className="flex items-center justify-between">
+                <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-sm font-semibold ${statusColors[selectedBooking.status]}`}>
+                  {statusLabels[selectedBooking.status]}
+                </span>
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Passenger</p>
+                <p className="text-base font-bold text-gray-900">{selectedBooking.name}</p>
+                <p className="text-sm text-gray-500 mt-1">{selectedBooking.phone}</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Route</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-[#efbf04] flex-shrink-0" />
+                    <p className="text-sm text-gray-700">{selectedBooking.from}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
+                    <p className="text-sm text-gray-700">{selectedBooking.to}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-3">⏰ {selectedBooking.departureTime}</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Vehicle</p>
+                <p className="text-sm font-semibold text-gray-900 mb-2">{selectedBooking.carSize}</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="bg-white border border-gray-200 text-gray-600 text-xs px-3 py-1 rounded-lg">👤 {selectedBooking.passengers} passengers</span>
+                  <span className="bg-white border border-gray-200 text-gray-600 text-xs px-3 py-1 rounded-lg">🧳 {selectedBooking.luggage} bags</span>
+                  {selectedBooking.hasChild && <span className="bg-blue-50 border border-blue-200 text-blue-700 text-xs px-3 py-1 rounded-lg">👶 Child seat</span>}
+                  {selectedBooking.hasPet && <span className="bg-orange-50 border border-orange-200 text-orange-700 text-xs px-3 py-1 rounded-lg">🐾 Pet</span>}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Update Status</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {USABLE_STATUSES.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => handleStatusChange(selectedBooking.id, s)}
+                      className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        selectedBooking.status === s ? 'bg-[#efbf04] text-black shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                    >
+                      {statusLabels[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={() => handleDelete(selectedBooking.id)} className="w-full py-3 rounded-xl bg-red-50 text-red-600 font-semibold text-sm hover:bg-red-100 transition-all">
+                Delete Booking
+              </button>
+
+              <p className="text-xs text-gray-400 text-center">Created: {selectedBooking.createdAt}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
