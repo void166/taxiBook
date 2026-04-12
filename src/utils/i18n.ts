@@ -116,7 +116,7 @@ export const t = {
     ctaBtn: 'Book a Taxi →',
 
     // Footer
-    footerDesc: 'Uppsala Taxi is at the forefront of modern traffic management. Book by phone, online, or through our mobile app.',
+    footerDesc: 'Nordic Uppsala Taxi is at the forefront of modern traffic management. Book by phone, online, or through our mobile app.',
     sitelinks: 'Sitelinks',
     contact: 'Contact',
     bookingHours: 'Booking',
