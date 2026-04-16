@@ -3,6 +3,7 @@ import { api } from './api';
 export interface Booking {
   id: string;
   name: string;
+  email: string;
   phone: string;
   from: string;
   to: string;

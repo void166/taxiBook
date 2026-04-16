@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLang } from '../../context/LanguageContext';
@@ -22,18 +22,17 @@ import imgUser12 from "figma:asset/ff85d0c52f1a84effb22fc31361c68690977a8a9.png"
 import imgLuggage12 from "figma:asset/5a95a5a4916950964bf3c2069c6999e5c5888d1e.png";
 import imgTimeLeft2 from "figma:asset/25722d3a34844e7fa0546a18766dfd34c494c807.png";
 import { addBooking } from '../../utils/bookings';
+import { loadGoogleMaps } from '../../utils/loadGoogleMaps';
+import PlacesAutocomplete from '../../components/PlacesAutocomplete';
 
-type CarSize = { passengers: number; luggage: number; label: string };
+interface CarSize { passengers: number; luggage: number; label: string }
 
 const carSizes: CarSize[] = [
-  { passengers: 4, luggage: 3, label: 'Standard' },
-  { passengers: 4, luggage: 4, label: 'Comfort' },
-  { passengers: 6, luggage: 6, label: 'Van' },
-  { passengers: 7, luggage: 7, label: 'Large Van' },
+  { passengers: 4, luggage: 3, label: '4 Seats' },
+  { passengers: 6, luggage: 5, label: '6 Seats' },
+  { passengers: 7, luggage: 7, label: '6 Seats Bus' },
 ];
 
-// Route is always Uppsala ↔ Arlanda
-type RouteDir = 'Uppsala → Arlanda' | 'Arlanda → Uppsala';
 
 export default function HomePage() {
   const { tr, lang, toggleLang } = useLang();
@@ -42,8 +41,10 @@ export default function HomePage() {
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCarSize, setSelectedCarSize] = useState(0);
-  const [routeDir, setRouteDir] = useState<RouteDir>('Uppsala → Arlanda');
+  const [from, setFrom] = useState('Uppsala');
+  const [to, setTo] = useState('Arlanda Airport');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [passengers, setPassengers] = useState(4);
   const [luggage, setLuggage] = useState(3);
@@ -53,12 +54,19 @@ export default function HomePage() {
   const [selectedDay, setSelectedDay] = useState('today');
   const [selectedTime, setSelectedTime] = useState('18:00');
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [mapsReady, setMapsReady] = useState(false);
 
-  const from = routeDir === 'Uppsala → Arlanda' ? 'Uppsala' : 'Arlanda';
-  const to   = routeDir === 'Uppsala → Arlanda' ? 'Arlanda' : 'Uppsala';
+  // Load Google Maps Places once
+  useEffect(() => {
+    loadGoogleMaps()
+      .then(() => setMapsReady(true))
+      .catch(() => setMapsReady(false));
+  }, []);
 
-  const swapRoute = () =>
-    setRouteDir(r => r === 'Uppsala → Arlanda' ? 'Arlanda → Uppsala' : 'Uppsala → Arlanda');
+  const swapRoute = () => {
+    setFrom(to);
+    setTo(from);
+  };
 
   const handleCarSizeSelect = (index: number) => {
     setSelectedCarSize(index);
@@ -75,6 +83,7 @@ export default function HomePage() {
     try {
       await addBooking({
         name: name.trim(),
+        email: email.trim(),
         phone: phone.trim(),
         from,
         to,
@@ -88,6 +97,7 @@ export default function HomePage() {
       });
       setBookingSuccess(true);
       setName('');
+      setEmail('');
       setPhone('');
       setTimeout(() => setBookingSuccess(false), 4000);
     } catch {
@@ -107,7 +117,7 @@ export default function HomePage() {
     <div className="bg-white relative min-h-screen font-['Rubik',sans-serif]">
 
       {/* ── Hero & Header ── */}
-      <div className="relative min-h-[520px] md:min-h-[580px] lg:h-[620px] overflow-visible">
+      <div className="relative overflow-visible">
 
         {/* Background */}
         <div className="absolute inset-0 z-0">
@@ -202,53 +212,95 @@ export default function HomePage() {
         </AnimatePresence>
 
         {/* ── Hero Text ── */}
-        <div className="relative z-10 mt-6 md:mt-10 text-center px-4">
+        <div className="relative z-10 mt-6 md:mt-10 text-center px-4 pb-10">
           <h1 className="font-light text-3xl sm:text-4xl lg:text-[42px] text-white mb-8 md:mb-12 drop-shadow-md tracking-tight leading-tight">
             {tr.heroTitle}
           </h1>
 
           {/* ── Route Selector ── */}
-          <div className="flex items-center justify-center max-w-[480px] mx-auto bg-white rounded-2xl overflow-hidden shadow-xl">
-            {/* From label */}
-            <div className="flex-1 h-[52px] flex items-center px-4 gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#efbf04] flex-shrink-0" />
-              <span className="font-bold text-sm text-gray-900 truncate">{from}</span>
+          <div className="flex items-center justify-center max-w-[520px] mx-auto bg-white rounded-2xl shadow-xl overflow-visible">
+            <div className="flex flex-col flex-1 divide-y divide-gray-100">
+              {/* From */}
+              <div className="h-[52px] flex items-center px-4">
+                {mapsReady ? (
+                  <PlacesAutocomplete
+                    value={from}
+                    onChange={setFrom}
+                    placeholder="from..."
+                    dotColor="#efbf04"
+                    className="w-full"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#efbf04] flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={from}
+                      onChange={e => setFrom(e.target.value)}
+                      placeholder="from..."
+                      className="w-full font-bold text-sm text-gray-900 placeholder:text-gray-400 placeholder:font-normal outline-none bg-transparent"
+                    />
+                  </div>
+                )}
+              </div>
+              {/* To */}
+              <div className="h-[52px] flex items-center px-4">
+                {mapsReady ? (
+                  <PlacesAutocomplete
+                    value={to}
+                    onChange={setTo}
+                    placeholder="To..."
+                    dotColor="#9ca3af"
+                    className="w-full"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="w-2.5 h-2.5 rounded-full bg-gray-400 flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={to}
+                      onChange={e => setTo(e.target.value)}
+                      placeholder="to..."
+                      className="w-full font-bold text-sm text-gray-900 placeholder:text-gray-400 placeholder:font-normal outline-none bg-transparent"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Swap Button */}
-            <button
-              onClick={swapRoute}
-              className="flex-shrink-0 w-10 h-10 rounded-full bg-[#efbf04] hover:bg-[#d9ab03] flex items-center justify-center transition-all active:scale-90 shadow-md mx-1"
-              title={tr.swapRoute}
-            >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-            </button>
-
-            {/* To label */}
-            <div className="flex-1 h-[52px] flex items-center px-4 gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-gray-400 flex-shrink-0" />
-              <span className="font-bold text-sm text-gray-900 truncate">{to}</span>
+            <div className="flex flex-col items-center gap-2 px-2">
+              <button
+                onClick={swapRoute}
+                className="w-9 h-9 rounded-full bg-[#efbf04] hover:bg-[#d9ab03] flex items-center justify-center transition-all active:scale-90 shadow-md"
+                title={tr.swapRoute}
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </button>
             </div>
 
             {/* Time */}
             <button
               onClick={() => setShowTimeModal(true)}
-              className="flex items-center gap-2 h-[52px] px-4 border-l border-gray-100 hover:bg-gray-50 transition-colors flex-shrink-0"
+              className="flex flex-col items-center justify-center gap-1 h-full px-4 border-l border-gray-100 hover:bg-gray-50 transition-colors flex-shrink-0 min-w-[80px]"
             >
               <img alt="Calendar" className="h-4 w-4 opacity-40" src={imgCalendar2} />
-              <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">
-                {departureTime === 'now' ? tr.travelNow : `${selectedDay} · ${selectedTime}`}
+              <span className="text-[10px] font-semibold text-gray-600 whitespace-nowrap">
+                {departureTime === 'now' ? tr.travelNow : `${selectedDay} ${selectedTime}`}
               </span>
             </button>
           </div>
         </div>
 
-        {/* ── Booking Card ── */}
-        <div className="relative z-30 mt-6 lg:absolute lg:left-1/2 lg:bottom-[-80px] lg:-translate-x-1/2 lg:mt-0 mx-auto max-w-[420px] px-4 lg:px-0 pb-6 lg:pb-0">
-          <div className="bg-white rounded-[24px] w-full p-5 sm:p-6 shadow-2xl border border-gray-50">
+      </div>
 
+      {/* ── Booking Card (hero-оос доор, тусдаа section) ── */}
+      <div className="bg-gray-50 py-8 px-4 flex justify-center">
+        <div className="bg-white rounded-[24px] w-full max-w-[460px] p-5 sm:p-6 shadow-xl border border-gray-100">
+
+          <AnimatePresence>
             {bookingSuccess && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -259,84 +311,93 @@ export default function HomePage() {
                 <span>✅</span> {tr.bookingSuccess}
               </motion.div>
             )}
+          </AnimatePresence>
 
-            <h2 className="text-lg font-bold text-gray-900 mb-4">{tr.bookingDetails}</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">{tr.bookingDetails}</h2>
 
-            {/* Name & Phone */}
-            <div className="space-y-2.5 mb-5">
-              <div className="border border-gray-200 focus-within:border-[#efbf04] focus-within:ring-1 focus-within:ring-[#efbf04]/30 rounded-xl h-[42px] px-4 flex items-center transition-all bg-gray-50/50">
-                <input
-                  type="text"
-                  placeholder={tr.fullName}
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full font-medium text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent"
-                />
-              </div>
-              <div className="border border-gray-200 focus-within:border-[#efbf04] focus-within:ring-1 focus-within:ring-[#efbf04]/30 rounded-xl h-[42px] px-4 flex items-center transition-all bg-gray-50/50">
-                <input
-                  type="tel"
-                  placeholder={tr.mobileNumber}
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  className="w-full font-medium text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent"
-                />
-              </div>
+          {/* Name, Email & Phone */}
+          <div className="space-y-2.5 mb-5">
+            <div className="border border-gray-200 focus-within:border-[#efbf04] focus-within:ring-1 focus-within:ring-[#efbf04]/30 rounded-xl h-[42px] px-4 flex items-center transition-all bg-gray-50/50">
+              <input
+                type="text"
+                placeholder={tr.fullName}
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className="w-full font-medium text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent"
+              />
             </div>
-
-            {/* Options Grid */}
-            <div className="grid grid-cols-3 gap-2 mb-5">
-              {/* Vehicle */}
-              <button
-                onClick={() => setShowCarSizeModal(true)}
-                className="bg-[#efbf04] h-[68px] rounded-xl flex flex-col items-center justify-center hover:brightness-105 active:scale-95 transition-all text-white shadow-sm"
-              >
-                <div className="flex items-center gap-1 mb-1">
-                  <span className="text-lg font-bold leading-none">{passengers}</span>
-                  <img alt="" className="h-3.5 w-3.5 brightness-0 invert" src={imgUser2} />
-                  <span className="text-sm opacity-40">·</span>
-                  <span className="text-lg font-bold leading-none">{luggage}</span>
-                  <img alt="" className="h-3.5 w-3.5 brightness-0 invert" src={imgLuggage2} />
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wide opacity-90">{tr.vehicle}</span>
-              </button>
-
-              {/* Child Seat */}
-              <button
-                onClick={() => setHasChild(!hasChild)}
-                className={`rounded-xl h-[68px] flex flex-col items-center justify-center gap-1.5 border-2 transition-all active:scale-95 ${
-                  hasChild ? 'bg-[#efbf04] border-[#efbf04] text-white' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'
-                }`}
-              >
-                <img alt="Child" className={`h-5 w-5 ${hasChild ? 'brightness-0 invert' : ''}`} src={imgToddler2} />
-                <span className="text-[9px] font-bold uppercase tracking-wide">{tr.childSeat}</span>
-              </button>
-
-              {/* Pet */}
-              <button
-                onClick={() => setHasPet(!hasPet)}
-                className={`rounded-xl h-[68px] flex flex-col items-center justify-center gap-1.5 border-2 transition-all active:scale-95 ${
-                  hasPet ? 'bg-[#efbf04] border-[#efbf04] text-white' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'
-                }`}
-              >
-                <img alt="Pet" className={`h-5 w-5 ${hasPet ? 'brightness-0 invert' : ''}`} src={imgPawprint2} />
-                <span className="text-[9px] font-bold uppercase tracking-wide">{tr.petFriendly}</span>
-              </button>
+            <div className="border border-gray-200 focus-within:border-[#efbf04] focus-within:ring-1 focus-within:ring-[#efbf04]/30 rounded-xl h-[42px] px-4 flex items-center transition-all bg-gray-50/50">
+              <input
+                type="email"
+                placeholder="Email (optional)"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full font-medium text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent"
+              />
             </div>
+            <div className="border border-gray-200 focus-within:border-[#efbf04] focus-within:ring-1 focus-within:ring-[#efbf04]/30 rounded-xl h-[42px] px-4 flex items-center transition-all bg-gray-50/50">
+              <input
+                type="tel"
+                placeholder={tr.mobileNumber}
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                className="w-full font-medium text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent"
+              />
+            </div>
+          </div>
 
-            {/* Book Now — no price shown */}
+          {/* Options Grid */}
+          <div className="grid grid-cols-3 gap-2 mb-5">
+            {/* Vehicle */}
             <button
-              onClick={handleBookNow}
-              className="w-full bg-black text-white h-[48px] rounded-xl font-bold text-[15px] hover:bg-gray-800 active:scale-95 transition-all shadow-lg"
+              onClick={() => setShowCarSizeModal(true)}
+              className="bg-[#efbf04] h-[68px] rounded-xl flex flex-col items-center justify-center hover:brightness-105 active:scale-95 transition-all text-white shadow-sm"
             >
-              {tr.bookNow}
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-lg font-bold leading-none">{passengers}</span>
+                <img alt="" className="h-3.5 w-3.5 brightness-0 invert" src={imgUser2} />
+                <span className="text-sm opacity-40">·</span>
+                <span className="text-lg font-bold leading-none">{luggage}</span>
+                <img alt="" className="h-3.5 w-3.5 brightness-0 invert" src={imgLuggage2} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wide opacity-90">{tr.vehicle}</span>
+            </button>
+
+            {/* Child Seat */}
+            <button
+              onClick={() => setHasChild(!hasChild)}
+              className={`rounded-xl h-[68px] flex flex-col items-center justify-center gap-1.5 border-2 transition-all active:scale-95 ${
+                hasChild ? 'bg-[#efbf04] border-[#efbf04] text-white' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'
+              }`}
+            >
+              <img alt="Child" className={`h-5 w-5 ${hasChild ? 'brightness-0 invert' : ''}`} src={imgToddler2} />
+              <span className="text-[9px] font-bold uppercase tracking-wide">{tr.childSeat}</span>
+            </button>
+
+            {/* Pet */}
+            <button
+              onClick={() => setHasPet(!hasPet)}
+              className={`rounded-xl h-[68px] flex flex-col items-center justify-center gap-1.5 border-2 transition-all active:scale-95 ${
+                hasPet ? 'bg-[#efbf04] border-[#efbf04] text-white' : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'
+              }`}
+            >
+              <img alt="Pet" className={`h-5 w-5 ${hasPet ? 'brightness-0 invert' : ''}`} src={imgPawprint2} />
+              <span className="text-[9px] font-bold uppercase tracking-wide">{tr.petFriendly}</span>
             </button>
           </div>
+
+          {/* Book Now */}
+          <button
+            onClick={handleBookNow}
+            className="w-full bg-black text-white h-[48px] rounded-xl font-bold text-[15px] hover:bg-gray-800 active:scale-95 transition-all shadow-lg"
+          >
+            {tr.bookNow}
+          </button>
         </div>
       </div>
 
       {/* ── Main Content ── */}
-      <div className="pt-6 lg:pt-[120px] pb-16 lg:pb-[100px] px-4 sm:px-8 md:px-16 lg:px-[100px] xl:px-[140px]">
+      <div className="pt-10 pb-16 lg:pb-[100px] px-4 sm:px-8 md:px-16 lg:px-[100px] xl:px-[140px]">
         <h1 className="font-bold text-[#efbf04] text-2xl sm:text-3xl lg:text-[40px] mb-5 leading-tight">
           {tr.homeH1}
         </h1>

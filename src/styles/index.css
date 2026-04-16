@@ -1,3 +1,30 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* Google Places autocomplete dropdown — always on top */
+.pac-container {
+  z-index: 9999 !important;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e5e7eb;
+  margin-top: 4px;
+  font-family: 'Rubik', sans-serif;
+}
+.pac-item {
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pac-item:hover,
+.pac-item-selected {
+  background-color: #fef9e7;
+}
+.pac-item-query {
+  font-weight: 600;
+  color: #111827;
+}
+.pac-matched {
+  color: #efbf04;
+  font-weight: 700;
+}

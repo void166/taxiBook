@@ -334,6 +334,7 @@ export default function AdminPage() {
                         <td className="px-5 py-4">
                           <p className="text-sm font-semibold text-gray-900">{booking.name}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{booking.phone}</p>
+                          {booking.email && <p className="text-xs text-blue-400 mt-0.5">{booking.email}</p>}
                         </td>
                         <td className="px-5 py-4">
                           <p className="text-sm text-gray-700">📍 {booking.from}</p>
@@ -394,6 +395,7 @@ export default function AdminPage() {
                       <div>
                         <p className="font-semibold text-gray-900">{booking.name}</p>
                         <p className="text-sm text-gray-400">{booking.phone}</p>
+                        {booking.email && <p className="text-xs text-blue-400">{booking.email}</p>}
                       </div>
                       <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold ${statusColors[booking.status]}`}>
                         {statusLabels[booking.status]}
@@ -462,6 +464,9 @@ export default function AdminPage() {
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Passenger</p>
                 <p className="text-base font-bold text-gray-900">{selectedBooking.name}</p>
                 <p className="text-sm text-gray-500 mt-1">{selectedBooking.phone}</p>
+                {selectedBooking.email && (
+                  <p className="text-sm text-blue-500 mt-1">{selectedBooking.email}</p>
+                )}
               </div>
 
               <div className="bg-gray-50 rounded-2xl p-4">

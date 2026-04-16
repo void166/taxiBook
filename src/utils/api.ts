@@ -36,6 +36,7 @@ function mapBooking(b: Record<string, unknown>): Booking {
   return {
     id: b.id as string,
     name: (b.name as string) ?? '',
+    email: (b.email as string) ?? '',
     phone: b.phone as string,
     from: b.from as string,
     to: b.to as string,
@@ -55,6 +56,7 @@ function mapBooking(b: Record<string, unknown>): Booking {
 function mapToBackend(booking: Omit<Booking, 'id' | 'status' | 'createdAt'>) {
   return {
     name: booking.name,
+    email: booking.email || null,
     phone: booking.phone,
     from: booking.from,
     to: booking.to,
