@@ -476,11 +476,11 @@ export default function HomePage() {
                 </div>
                 <div className="flex items-start gap-2.5">
                   <img alt="" className="h-5 w-5 flex-shrink-0 mt-0.5" src={imgGps11} />
-                  <span className="text-sm text-black leading-relaxed">Murargatan 33, Uppsala<br />00:00 – 24/7</span>
+                  <span className="text-sm text-black leading-relaxed">Strandbodkilen 1, 753 24 Uppsala<br />00:00 – 24/7</span>
                 </div>
                 <div className="flex items-center gap-2.5">
                   <img alt="" className="h-5 w-5 flex-shrink-0" src={imgEmail1} />
-                  <span className="text-sm text-black">Info@nordicnaw.se</span>
+                  <span className="text-sm text-black">bokning@nordicuppsalataxi.se</span>
                 </div>
               </div>
             </div>

@@ -23,6 +23,7 @@ export default function AboutPage() {
       content: [
         { type: 'text' as const, value: tr.quality1 },
         { type: 'text' as const, value: tr.quality2 },
+        {type: 'text' as const, value: tr.quality5},
         { type: 'list' as const, items: [tr.qualityItem1, tr.qualityItem2, tr.qualityItem3, tr.qualityItem4] },
         { type: 'text' as const, value: tr.quality3 },
       ],
@@ -48,7 +49,10 @@ export default function AboutPage() {
     {
       icon: '🌿',
       title: tr.envTitle,
-      content: [{ type: 'text' as const, value: tr.env1 }],
+      content: [
+        { type: 'text' as const, value: tr.env1 },
+        { type: 'text' as const, value: tr.env2 },
+      ],
     },
     {
       icon: '✅',
@@ -56,6 +60,8 @@ export default function AboutPage() {
       content: [
         { type: 'text' as const, value: tr.bky1 },
         { type: 'text' as const, value: tr.bky2 },
+        { type: 'text' as const, value: tr.bky3 },
+        { type: 'list' as const, items: [tr.safetyItem1, tr.safetyItem2, tr.safetyItem3] },
       ],
     },
   ];
@@ -133,6 +139,9 @@ export default function AboutPage() {
         <h1 className="font-bold text-[#efbf04] text-2xl sm:text-3xl lg:text-[40px] mb-5 leading-tight">
           {tr.aboutH1}
         </h1>
+        <h2 className='mb-4'>
+          {tr.aboutUnder}
+        </h2>
         <p className="text-base text-gray-700 leading-relaxed mb-12 max-w-[760px]">{tr.aboutIntro}</p>
 
         <div className="space-y-10 max-w-[820px]">
@@ -201,8 +210,8 @@ export default function AboutPage() {
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-black">{tr.bookingHours}<br /><span className="font-normal text-black/70">{tr.monSun}</span></p>
                 <div className="flex items-center gap-2.5"><img alt="" className="h-5 w-5 flex-shrink-0" src={imgPhoneCall1} /><span className="text-sm font-semibold text-black">018 800 50 50</span></div>
-                <div className="flex items-start gap-2.5"><img alt="" className="h-5 w-5 flex-shrink-0 mt-0.5" src={imgGps11} /><span className="text-sm text-black leading-relaxed">Murargatan 33, Uppsala<br />00:00 – 24/7</span></div>
-                <div className="flex items-center gap-2.5"><img alt="" className="h-5 w-5 flex-shrink-0" src={imgEmail1} /><span className="text-sm text-black">Info@nordicnaw.se</span></div>
+                <div className="flex items-start gap-2.5"><img alt="" className="h-5 w-5 flex-shrink-0 mt-0.5" src={imgGps11} /><span className="text-sm text-black leading-relaxed">Strandbodkilen 1, 753 24 Uppsala<br />00:00 – 24/7</span></div>
+                <div className="flex items-center gap-2.5"><img alt="" className="h-5 w-5 flex-shrink-0" src={imgEmail1} /><span className="text-sm text-black">bokning@nordicuppsalataxi.se</span></div>
               </div>
             </div>
             <div>

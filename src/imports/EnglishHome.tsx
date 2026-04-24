@@ -163,7 +163,7 @@ function Group1() {
 function Group2() {
   return (
     <div className="absolute contents left-[695px] top-[1274px]">
-      <p className="absolute font-['Rubik:Light',sans-serif] font-light leading-[normal] left-[730px] text-[12px] text-black top-[1277px] whitespace-nowrap">Info@nordicnaw.se</p>
+      <p className="absolute font-['Rubik:Light',sans-serif] font-light leading-[normal] left-[730px] text-[12px] text-black top-[1277px] whitespace-nowrap">bokning@nordicuppsalataxi.se</p>
       <div className="absolute left-[695px] size-[20px] top-[1274px]" data-name="email 1">
         <img alt="" className="absolute inset-0 max-w-none object-cover pointer-events-none size-full" src={imgEmail1} />
       </div>
